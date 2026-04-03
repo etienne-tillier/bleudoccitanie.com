@@ -11,8 +11,8 @@ export async function generateSitemapXml(
     if (lang === "fr") {
         urls = staticPages.map((route) => ({ loc: `${BASE_URL}${route}`, lastmod: new Date().toISOString() }));
     }
-    urls = [...urls, ...posts.map((post: { slug: string; updated_at?: string }) => ({
-        loc: `${BASE_URL}/blog/${post.slug}`, lastmod: post.updated_at || new Date().toISOString(),
+    urls = [...urls, ...posts.map((post) => ({
+        loc: `${BASE_URL}/blog/${post.slug}`, lastmod: post.updated_at ?? new Date().toISOString(),
     }))];
     return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

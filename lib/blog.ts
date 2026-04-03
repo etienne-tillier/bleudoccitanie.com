@@ -10,6 +10,27 @@ const CONTENT_CACHE_VERSION = process.env.CONTENT_CACHE_VERSION?.trim() || "v2";
 const SITE_CACHE_KEY = `${SITE_ID || SITE_DOMAIN || "unknown-site"}:${CONTENT_CACHE_VERSION}`;
 export const POSTS_PER_PAGE = 12;
 
+type BlogCategory = NonNullable<BlogPost["categories"]>[number];
+type TranslationEntry = {
+    slug?: string;
+    h1?: string;
+    seo_title?: string;
+    meta_description?: string;
+    status?: string;
+};
+type TranslationMap = Record<string, TranslationEntry>;
+type RawCategoryRelation = {
+    category?: BlogCategory | BlogCategory[] | null;
+};
+type RawBlogPost = Omit<BlogPost, "categories" | "cover" | "author" | "translations"> & {
+    cover?: BlogPost["cover"] | BlogPost["cover"][] | null;
+    author?: BlogPost["author"] | BlogPost["author"][] | null;
+    categories?: Array<RawCategoryRelation | BlogCategory | null> | null;
+    translations?: unknown;
+    faqs?: unknown;
+    meta_title?: string;
+};
+
 const BLOG_LISTING_SELECT = `
   id, slug, h1, seo_title, meta_description, published_at, default_locale, excerpt,
   cover:blog_assets!cover_asset_id(file_url, alt),
@@ -51,31 +72,52 @@ async function getSiteId(): Promise<string | null> {
     return getCachedSiteId();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizePost(post: any): BlogPost {
-    if (typeof post.translations === "string") { try { post.translations = JSON.parse(post.translations); } catch { /* noop */ } }
-    if (typeof post.faqs === "string") { try { post.faqs = JSON.parse(post.faqs); } catch { /* noop */ } }
+function normalizePost(post: RawBlogPost): BlogPost {
+    const parsedTranslations = parseTranslations(post.translations);
     return {
         ...post,
+        translations: parsedTranslations,
         meta_title: post.seo_title || post.meta_title,
-        cover: Array.isArray(post.cover) ? post.cover[0] : post.cover,
-        author: Array.isArray(post.author) ? post.author[0] : post.author,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        categories: post.categories?.map((c: any) => c.category).filter(Boolean) || [],
+        cover: Array.isArray(post.cover) ? (post.cover[0] ?? undefined) : (post.cover ?? undefined),
+        author: Array.isArray(post.author) ? (post.author[0] ?? undefined) : (post.author ?? undefined),
+        categories: (post.categories || [])
+            .map((categoryOrRelation) => {
+                if (!categoryOrRelation) return null;
+                const resolved = "category" in categoryOrRelation
+                    ? (categoryOrRelation.category ?? null)
+                    : categoryOrRelation;
+                return Array.isArray(resolved) ? (resolved[0] ?? null) : resolved;
+            })
+            .filter((category): category is BlogCategory => Boolean(category)),
     };
 }
 
-function parseTranslations(translations: unknown): Record<string, any> {
+function parseTranslations(translations: unknown): TranslationMap {
     if (!translations) return {};
     if (typeof translations === "string") {
         try {
-            return JSON.parse(translations);
+            return parseTranslations(JSON.parse(translations));
         } catch {
             return {};
         }
     }
-    if (typeof translations === "object") {
-        return translations as Record<string, any>;
+    if (typeof translations === "object" && !Array.isArray(translations)) {
+        const raw = translations as Record<string, unknown>;
+        const parsed: TranslationMap = {};
+
+        for (const [locale, value] of Object.entries(raw)) {
+            if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+            const source = value as Record<string, unknown>;
+            parsed[locale] = {
+                slug: typeof source.slug === "string" ? source.slug : undefined,
+                h1: typeof source.h1 === "string" ? source.h1 : undefined,
+                seo_title: typeof source.seo_title === "string" ? source.seo_title : undefined,
+                meta_description: typeof source.meta_description === "string" ? source.meta_description : undefined,
+                status: typeof source.status === "string" ? source.status : undefined,
+            };
+        }
+
+        return parsed;
     }
     return {};
 }
@@ -93,12 +135,12 @@ function matchesSearch(post: BlogPost, rawSearchTerm?: string | null): boolean {
         post.seo_title,
         post.meta_description,
         post.excerpt,
-        ...((post.categories || []).flatMap((category: any) => [category?.slug, category?.label])),
-        ...Object.values(translations).flatMap((translation: any) => [
-            translation?.slug,
-            translation?.h1,
-            translation?.seo_title,
-            translation?.meta_description,
+        ...((post.categories || []).flatMap((category) => [category?.slug, category?.label])),
+        ...Object.values(translations).flatMap((translation) => [
+            translation.slug,
+            translation.h1,
+            translation.seo_title,
+            translation.meta_description,
         ]),
     ]
         .filter(Boolean)
@@ -462,8 +504,8 @@ export async function getPostTranslations(post: BlogPost) {
         allTranslations[post.default_locale] = { slug: post.slug };
     }
 
-    Object.entries(translations).forEach(([locale, translation]: [string, any]) => {
-        if (translation?.status === "published" && translation?.slug) {
+    Object.entries(translations).forEach(([locale, translation]) => {
+        if (translation.status === "published" && translation.slug) {
             allTranslations[locale] = { slug: translation.slug };
         }
     });
@@ -522,23 +564,14 @@ const getBlogPostsForSitemapCached = unstable_cache(
 
         const langLower = lang.toLowerCase();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return posts.reduce((acc: any[], post) => {
+        return posts.reduce<Array<{ slug: string; updated_at: string | null }>>((acc, post) => {
             let finalSlug = post.slug;
             let isMatch = false;
 
             if (post.default_locale?.toLowerCase().startsWith(langLower)) isMatch = true;
 
             if (post.translations) {
-                let translations = post.translations;
-                if (typeof translations === "string") {
-                    try {
-                        translations = JSON.parse(translations);
-                    } catch {
-                        /* noop */
-                    }
-                }
-
+                const translations = parseTranslations(post.translations);
                 const matchingKey = Object.keys(translations).find((key) => key.toLowerCase().startsWith(langLower));
                 if (matchingKey) {
                     isMatch = true;
