@@ -2,4 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Design system — L'agent IA ajoute ses CSS variables ici */
+@layer base {
+  :root {
+    --background: #faf8f5;
+    --foreground: #1e293b;
+    --primary: #0a4275;
+    --primary-foreground: #ffffff;
+    --secondary: #dfa013;
+    --secondary-foreground: #ffffff;
+    --accent: #8a7f9d;
+    --accent-foreground: #ffffff;
+    --card: #ffffff;
+    --card-foreground: #1e293b;
+    --border: #e2e8f0;
+    --hover: #f28b50;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+/* Animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }

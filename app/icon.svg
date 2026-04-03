@@ -1,10 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="nsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#111827"/>
-      <stop offset="100%" stop-color="#374151"/>
-    </linearGradient>
-  </defs>
-  <rect width="128" height="128" rx="28" fill="url(#nsGrad)"/>
-  <text x="64" y="82" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="56" fill="#f9fafb">N</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#0a4275"/>
+  <circle cx="256" cy="200" r="80" fill="#dfa013"/>
+  <path d="M100 350 Q 256 250 412 350" fill="none" stroke="#faf8f5" stroke-width="40" stroke-linecap="round"/>
+  <path d="M100 420 Q 256 320 412 420" fill="none" stroke="#8a7f9d" stroke-width="40" stroke-linecap="round"/>
 </svg>
