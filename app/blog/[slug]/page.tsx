@@ -123,12 +123,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           {post.author && (
             <div className="mt-16 border-t border-border pt-8 flex items-center gap-6">
               {post.author.avatar_url && (
-                <div className="relative h-16 w-16 shrink-0 rounded-full overflow-hidden border border-border shrink-0">
+                <div className="relative h-32 w-32 shrink-0 rounded-full overflow-hidden border border-border shrink-0">
                   <Image
                     src={post.author.avatar_url}
                     alt={post.author.name}
                     fill
                     className="object-cover"
+                  quality={95}
                   />
                 </div>
               )}
